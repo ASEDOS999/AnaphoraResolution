@@ -121,7 +121,8 @@ def get_antecedents(root, ind, s, s1):
 			'start_symb' : s1 + root_subtree.value.begin,
 			'end_symb' : s1 + root_subtree.value.end,
 			'parent_value' : parent[0],
-			'dependence' : parent[1]
+			'dependence' : parent[1],
+			'role' : root_subtree.value.role
 			})
 	return cur_res
 
@@ -136,7 +137,8 @@ def get_anaphors(root, ind, s, s1):
 			'start_symb' : s1 + root_subtree.value.begin,
 			'end_symb' : s1 + root_subtree.value.end,
 			'parent_value' : parent[0],
-			'dependence' : parent[1]
+			'dependence' : parent[1],
+			'role' : root_subtree.value.role
 			})
 	return cur_res
 
