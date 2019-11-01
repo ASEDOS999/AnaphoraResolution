@@ -18,8 +18,9 @@ class Configuration:
 
 
 def parse(text):
+	__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 	configParser = ConfigParser.ConfigParser()
-	configParser.read("intellection_wrapper.cfg")
+	configParser.read(os.path.join(__location__, 'intellection_wrapper.cfg'))
 	config = Configuration()
 	config.webAddress = configParser.get("Common", "webAddress")
 	config.cgiPath = configParser.get("Common", "cgiPath")
@@ -75,8 +76,9 @@ def extract_semantic_relations(text):
 				'child' : child
 			})
 	return processed_relations
+
 if __name__ == '__main__':
-	sentence = "Мама мыла его."
+	sentence = "Он будет чистым."
 	relations = (extract_semantic_relations(sentence))
 	for i in relations:
 		print('\n')
