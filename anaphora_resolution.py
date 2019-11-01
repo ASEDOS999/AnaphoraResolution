@@ -1,4 +1,4 @@
-sfrom isanlp import PipelineCommon
+from isanlp import PipelineCommon
 from isanlp.processor_remote import ProcessorRemote
 from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
 
@@ -55,8 +55,8 @@ def get_tree(text):
 			vert = tree(word(analysis_res['lemma'][j][i],
 					analysis_res['postag'][j][i],
 					analysis_res['morph'][j][i],
-					analysis_res['tokens'][j].begin,
-					analysis_res['tokens'][j].end,
+					analysis_res['tokens'][i].begin,
+					analysis_res['tokens'][i].end,
 					i))
 			vertices_list.append(vert)
 		vertices_list_list.append(vertices_list)
@@ -72,20 +72,20 @@ def get_tree(text):
 				root_list.append(list_[j])
 	return root_list
 
-def get_subtree(root, postag = 'NOUN', res = list()):
-	if (root.value.postag == postag and 
-		(postag != 'PRON' or not root.value.lemma in ['этот', 'тот', 'такой'])):
+def get_subtree(root, postag = 'NOUN', res = None):
+	if res is None:
+		res = list()
+	if postag == 'PRON' and root.value.postag == 'NOUN':
+		mark = False
+		for i in root.kids:
+			if i[0].value.lemma in ['этот', 'тот', 'такой']:
+				mark = True
+		if mark:
+			res.append(root)
+	elif root.value.postag == postag:
 		res.append(root)
-	elif:
-		if postag == 'PRON' and root.value.postag == 'NOUN':
-			mark = False
-			for i in root.kids:
-				if i[0].value.lemma in ['этот', 'тот', 'такой']:
-					mark = True
-			if mark:
-				res.append(root)
 	for i in root.kids:
-		get_subtree(i[0], postag, res)
+		res = get_subtree(i[0], postag, res)
 	return res
 
 def separation_to_sentences(text):
@@ -104,39 +104,39 @@ def separation_to_sentences(text):
 	sentences = [(i, len(i.split())) for i in sentences]
 	return sentences
 
-def get_ancedents(root, ind, s, s1):
-		nouns_subtrees = get_subtree(root, postag = 'NOUN')
-		cur_res = []
-		for root_subtree in nouns_subtrees:
-			cur_res.append({'subtree' : root,
-				'sent_num' : ind,
-				'noun_index' : s + root_subtree.value.index,
-				'start_symb' : s1 + root_subtree.value.begin,
-				'end_symb' : s1 + root_subtree.value.end
-				})
-		return cur_res
+def get_antecedents(root, ind, s, s1):
+	nouns_subtrees = get_subtree(root, postag = 'NOUN')
+	cur_res = []
+	for root_subtree in nouns_subtrees:
+		cur_res.append({'subtree' : root,
+			'sent_num' : ind,
+			'noun_index' : s + root_subtree.value.index,
+			'start_symb' : s1 + root_subtree.value.begin,
+			'end_symb' : s1 + root_subtree.value.end
+			})
+	return cur_res
 
 def get_anaphors(root, ind, s, s1):
-		pron_subtrees = get_subtree(root, postag = 'PRON')
-		cur_res = []
-		for root_subtree in pron_subtrees:
-			cur_res.append({'subtree' : root,
-				'sent_num' : ind,
-				'noun_index' : s + root_subtree.value.index,
-				'start_symb' : s1 + root_subtree.value.begin,
-				'end_symb' : s1 + root_subtree.value.end
-				})
-		return cur_res
+	pron_subtrees = get_subtree(root, postag = 'PRON')
+	cur_res = []
+	for root_subtree in pron_subtrees:
+		cur_res.append({'subtree' : root,
+			'sent_num' : ind,
+			'noun_index' : s + root_subtree.value.index,
+			'start_symb' : s1 + root_subtree.value.begin,
+			'end_symb' : s1 + root_subtree.value.end
+			})
+	return cur_res
 
 def get_antecedent_anaphor(text):
 	sentences = separation_to_sentences(text)
-	ancedents, anaphors = [], []
+	antecedents, anaphors = [], []
 	s, s1 = 0, 0
 	for ind, item in enumerate(sentences):
 		sentence, num_token = item
 		root = get_tree(sentence)[0]
-		ancedents += get_ancedents(root, ind, s, s1)
-		anaphors += get_anaphors(root, ind, s, s1)
+		antecedents = antecedents + get_antecedents(root, ind, s, s1)
+		anaphors = anaphors + get_anaphors(root, ind, s, s1)
 		s += num_token
 		s1 += len(sentence)
-	return ancedents, anaphors
+	return antecedents, anaphors
