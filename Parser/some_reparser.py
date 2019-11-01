@@ -57,7 +57,31 @@ def parse(text):
 	json_format = json.loads(data)
 	return json.loads(base64.b64decode(json_format["result"]["boost_serialization"]["datastream"]["content"]).decode('utf-8'))
 
+def extract_semantic_relations(text):
+	json_results = parse(text)
+	sem = json_results['sem']
+	entities = sem['entities']
+	words = dict()
+	for i in entities:
+		words[i['base']['id']] = i['span']
+	relations = sem['relations']
+	processed_relations = []
+	for relation in relations:
+		tp = relation['base']['tp']
+		parent = words[relation['parent']['id']]
+		child = words[relation['child']['id']]
+		processed_relations.append({'tp' : tp,
+				'parent' : parent,
+				'child' : child
+			})
+	return processed_relations
 if __name__ == '__main__':
-	sentence = "Мама мыла раму."
-	json_result = parse(sentence)
-	print(json_result)
+	sentence = "Мама мыла его."
+	relations = (extract_semantic_relations(sentence))
+	for i in relations:
+		print('\n')
+		print('Type', i['tp'])
+		begin, end = i['parent']['start'], i['parent']['end']
+		print('Parent', sentence[begin:end])
+		begin, end = i['child']['start'], i['child']['end']
+		print('Child', sentence[begin:end])
