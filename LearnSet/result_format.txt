@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<rueval collectionid="RUEVAL-COREF2014" trackid="anaphora" systemid="???">
+<documents>
+  <document file="OFC/2.txt">
+    <chain>
+      <item sh="788" ln="17" comment="???">
+        <cont><![CDATA[«Школа злословия»]]></cont>
+      </item>
+      <item sh="819" ln="5" comment="???">
+        <cont><![CDATA[собой]]></cont>
+      </item>
+	  ...
+    </chain>
+	...
+  </document>
+  ...
+</documents>
+</rueval>
