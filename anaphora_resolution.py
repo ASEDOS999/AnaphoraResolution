@@ -73,7 +73,6 @@ def get_tree(text):
 	return root_list
 
 def get_subtree(root, postag = 'NOUN', res = list()):
-	print(root.value.postag)
 	if root.value.postag == postag:
 		res.append(root)
 	for i in root.kids:
@@ -124,7 +123,6 @@ def get_antecedent_anaphor(text):
 	sentences = separation_to_sentences(text)
 	ancedents, anaphors = [], []
 	s, s1 = 0, 0
-	
 	for ind, item in enumerate(sentences):
 		sentence, num_token = item
 		root = get_tree(sentence)[0]
