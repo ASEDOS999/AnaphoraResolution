@@ -72,7 +72,7 @@ def get_tree(text):
 				root_list.append(list_[j])
 	return root_list
 
-def get_subtree(root, postag = 'NOUN', res = None):
+def get_subtree(root, postag = 'NOUN', res = None, parent = (None, None)):
 	if res is None:
 		res = list()
 	if postag == 'PRON' and root.value.postag == 'NOUN':
@@ -81,11 +81,11 @@ def get_subtree(root, postag = 'NOUN', res = None):
 			if i[0].value.lemma in ['этот', 'тот', 'такой']:
 				mark = True
 		if mark:
-			res.append(root)
+			res.append((root, parent))
 	elif root.value.postag == postag:
-		res.append(root)
+		res.append((root, parent))
 	for i in root.kids:
-		res = get_subtree(i[0], postag, res)
+		res = get_subtree(i[0], postag, res, (root.value, i[1]))
 	return res
 
 def separation_to_sentences(text):
@@ -108,11 +108,14 @@ def get_antecedents(root, ind, s, s1):
 	nouns_subtrees = get_subtree(root, postag = 'NOUN')
 	cur_res = []
 	for root_subtree in nouns_subtrees:
+		root_subtree, parent = root_subtree
 		cur_res.append({'subtree' : root,
 			'sent_num' : ind,
 			'noun_index' : s + root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
-			'end_symb' : s1 + root_subtree.value.end
+			'end_symb' : s1 + root_subtree.value.end,
+			'parent_value' : parent[0],
+			'dependence' : parent[1]
 			})
 	return cur_res
 
@@ -120,11 +123,14 @@ def get_anaphors(root, ind, s, s1):
 	pron_subtrees = get_subtree(root, postag = 'PRON')
 	cur_res = []
 	for root_subtree in pron_subtrees:
+		root_subtree, parent = root_subtree
 		cur_res.append({'subtree' : root,
 			'sent_num' : ind,
 			'noun_index' : s + root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
-			'end_symb' : s1 + root_subtree.value.end
+			'end_symb' : s1 + root_subtree.value.end,
+			'parent_value' : parent[0],
+			'dependence' : parent[1]
 			})
 	return cur_res
 
