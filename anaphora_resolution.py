@@ -12,20 +12,20 @@ class tree:
 		self.kids.append((value, mytype))
 
 class word:
-	def __init__(self, lemma, postag, morph, begin , end, index):
+	def __init__(self, lemma, postag, morph, begin , end, index, role = None):
 		self.lemma = lemma
 		self.postag = postag
 		self.morph = morph
 		self.index = index
 		self.begin = begin
 		self.end = end
-
+		self.role = role
 
 def get_tree(text):
 	from isanlp import PipelineCommon
 	from isanlp.processor_remote import ProcessorRemote
 	from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
-
+	from Parser.some_reparser import extract_semantic_relations
 	HOST = 'localhost'
 	proc_morph = ProcessorRemote(HOST, 3333, 'default')
 	proc_syntax = ProcessorRemote(HOST, 3334, '0')
