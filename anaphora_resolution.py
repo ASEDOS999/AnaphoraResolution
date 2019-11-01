@@ -1,4 +1,4 @@
-from isanlp import PipelineCommon
+sfrom isanlp import PipelineCommon
 from isanlp.processor_remote import ProcessorRemote
 from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
 
@@ -73,8 +73,17 @@ def get_tree(text):
 	return root_list
 
 def get_subtree(root, postag = 'NOUN', res = list()):
-	if root.value.postag == postag:
+	if (root.value.postag == postag and 
+		(postag != 'PRON' or not root.value.lemma in ['этот', 'тот', 'такой'])):
 		res.append(root)
+	elif:
+		if postag == 'PRON' and root.value.postag == 'NOUN':
+			mark = False
+			for i in root.kids:
+				if i[0].value.lemma in ['этот', 'тот', 'такой']:
+					mark = True
+			if mark:
+				res.append(root)
 	for i in root.kids:
 		get_subtree(i[0], postag, res)
 	return res
