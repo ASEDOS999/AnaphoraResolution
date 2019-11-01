@@ -25,8 +25,8 @@ def parse(text):
 	config.webAddress = configParser.get("Common", "webAddress")
 	config.cgiPath = configParser.get("Common", "cgiPath")
 
-	sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
-	sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+	#sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+	#sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 	d_data = {
 		"jsonrpc": "2.0",

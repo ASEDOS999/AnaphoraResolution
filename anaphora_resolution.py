@@ -49,15 +49,21 @@ def get_tree(text):
 			sentence.append(analysis_res['tokens'][j].text)
 		sentences.append(sentence)
 	vertices_list_list = []
+	relations = extract_semantic_relations(text)
 	for j in range(len(analysis_res['lemma'])):
 		vertices_list = []
 		for i in range(len(analysis_res['lemma'][j])):
+			start, end = analysis_res['tokens'][i].begin, analysis_res['tokens'][i].end
+			role_vert = []
+			for rel in relations:
+				if rel['child']['start'] == start and rel['child']['end'] == end:
+					role_vert.append(rel['tp'])
 			vert = tree(word(analysis_res['lemma'][j][i],
 					analysis_res['postag'][j][i],
 					analysis_res['morph'][j][i],
-					analysis_res['tokens'][i].begin,
-					analysis_res['tokens'][i].end,
-					i))
+					start, end,
+					i,
+					role = role_vert))
 			vertices_list.append(vert)
 		vertices_list_list.append(vertices_list)
 	root_list = []
