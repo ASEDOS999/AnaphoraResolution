@@ -57,6 +57,7 @@ def get_tree(text):
 		vertices_list = []
 		for i in range(len(analysis_res['lemma'][j])):
 			start, end = analysis_res['tokens'][i].begin, analysis_res['tokens'][i].end
+			print(text[start:end])
 			role_vert = []
 			for rel in relations:
 				if rel['child']['start'] == start and rel['child']['end'] == end:
@@ -108,8 +109,10 @@ def separation_to_sentences(text):
 			ind += 1
 		_.append(list_points[ind])
 		ind+=1
-	list_points = [0] + _
-	sentences = [text[i:list_points[ind+1]+1] for ind, i in enumerate(list_points[:-1])]
+	list_points = [-1] + _
+	if list_points[-1] != len(text)-1:
+		list_points[-1] = len(text)
+	sentences = [text[i+1:list_points[ind+1]+1] for ind, i in enumerate(list_points[:-1])]
 	sentences = [(i, len(i.split())) for i in sentences]
 	return sentences
 
