@@ -118,7 +118,7 @@ def get_antecedents(root, ind, s, s1):
 	cur_res = []
 	for root_subtree in nouns_subtrees:
 		root_subtree, parent = root_subtree
-		cur_res.append({'subtree' : root,
+		cur_res.append({'subtree' : root_subtree,
 			'sent_num' : ind,
 			'noun_index' : s + root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
@@ -134,7 +134,7 @@ def get_anaphors(root, ind, s, s1):
 	cur_res = []
 	for root_subtree in pron_subtrees:
 		root_subtree, parent = root_subtree
-		cur_res.append({'subtree' : root,
+		cur_res.append({'subtree' : root_subtree,
 			'sent_num' : ind,
 			'noun_index' : s + root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
