@@ -18,6 +18,7 @@ class Configuration:
 
 
 def parse(text):
+	print(text)
 	__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 	configParser = ConfigParser.ConfigParser()
 	configParser.read(os.path.join(__location__, 'intellection_wrapper.cfg'))
@@ -56,10 +57,14 @@ def parse(text):
 		raise Exception("Got status {} because '{}'".format(response.status, response.reason))
 
 	json_format = json.loads(data)
-	return json.loads(base64.b64decode(json_format["result"]["boost_serialization"]["datastream"]["content"]).decode('utf-8'))
-
+	try:
+		return json.loads(base64.b64decode(json_format["result"]["boost_serialization"]["datastream"]["content"]).decode('utf-8'))
+	except:
+		return None
 def extract_semantic_relations(text):
 	json_results = parse(text)
+	if json_results is None:
+		return []
 	sem = json_results['sem']
 	entities = sem['entities']
 	words = dict()
