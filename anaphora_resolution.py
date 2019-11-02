@@ -41,7 +41,10 @@ def get_tree(text):
 			['postag'],
 			{'postag' : 'postag', 'morph' : 'morph'})
 		])
-	analysis_res = syntax_ppl(text)
+	try:
+		analysis_res = syntax_ppl(text)
+	except:
+		return None
 	sentences = []
 	for i in analysis_res['sentences']:
 		sentence = []
@@ -106,7 +109,7 @@ def separation_to_sentences(text):
 		_.append(list_points[ind])
 		ind+=1
 	list_points = [0] + _
-	sentences = [text[i:list_points[ind+1]] for ind, i in enumerate(list_points[:-1])]
+	sentences = [text[i:list_points[ind+1]+1] for ind, i in enumerate(list_points[:-1])]
 	sentences = [(i, len(i.split())) for i in sentences]
 	return sentences
 
@@ -148,9 +151,11 @@ def get_antecedent_anaphor(text):
 	s, s1 = 0, 0
 	for ind, item in enumerate(sentences):
 		sentence, num_token = item
-		root = get_tree(sentence)[0]
-		antecedents = antecedents + get_antecedents(root, ind, s, s1)
-		anaphors = anaphors + get_anaphors(root, ind, s, s1)
+		root = get_tree(sentence)
+		if not root is None:
+			root = root[0]
+			antecedents = antecedents + get_antecedents(root, ind, s, s1)
+			anaphors = anaphors + get_anaphors(root, ind, s, s1)
 		s += num_token
 		s1 += len(sentence)
 	return antecedents, anaphors
