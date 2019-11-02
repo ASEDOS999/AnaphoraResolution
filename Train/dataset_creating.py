@@ -36,6 +36,31 @@ def get_dataset(files):
 	print(time.time()-s)
 	return dataset
 
+def contains(words, xml_obj):
+	attrib = xml_obj['attrib']
+	start, end = attrib['sh'], attrib['ln']
+	def equal(word, start = start, end = end):
+		cur_start, cur_end = word['start_symb'], word['end_symb']
+		return cur_start>=start and cur_end<=end
+	for word in words:
+		if equal(word):
+			return True
+	return False
+
+def get_matching_one(dataset, xml_dataset):
+	for i in xml_dataset:
+		num_ant = contains(antecedents, i['answer'])
+		num_anaph = contains(anaphors, i['anaphor'])
+		if not (num_ant is None or num_anaph is None):
+			res.append((num_ant, num_anaph))
+	return res
+
+def get_matching(our_dataset, xml_dataset):
+	res = list()
+	for i in xml_dataset:
+		if i in our_dataset:
+			res += (get_matching_one(our_dataset[i], xml_dataset))
+	return res
 if __name__ == '__main__':
 	folder = '../LearnSet/AnaphFiles/'
 	print('Number Of Files',len(get_all_files(folder)))
