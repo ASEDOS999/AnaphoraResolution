@@ -40,7 +40,6 @@ def contains(words, xml_obj):
 	attrib = xml_obj['attr']
 	start, ln = int(attrib['sh']), int(attrib['ln'])
 	end = start + ln
-	print(start,end)
 	def equal(word, start = start, end = end):
 		cur_start, cur_end = word['start_symb'], word['end_symb']
 		return cur_start>=start and cur_end<=end
@@ -56,7 +55,7 @@ def get_matching_one(dataset, xml_dataset):
 		if 'answer' in i and 'anaphor' in i:
 			num_ant = contains(antecedents, i['answer'])
 			num_anaph = contains(anaphors, i['anaphor'])
-			if not (num_ant is None and num_anaph is None):
+			if not (num_ant is None or num_anaph is None):
 				res.append((num_ant, num_anaph))
 	return res
 
@@ -86,4 +85,5 @@ if __name__ == '__main__':
 		pickle.dump(my_dataset, f)
 		f.close()
 	match = get_matching(my_dataset, dataset_from_xml)
-	print(match)
+	print(len(match))
+
