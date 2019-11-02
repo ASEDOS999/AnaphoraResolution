@@ -152,7 +152,7 @@ def get_antecedent_anaphor(text):
 	for ind, item in enumerate(sentences):
 		sentence, num_token = item
 		root = get_tree(sentence)
-		if not root is None:
+		if not root is None and len(root) > 0:
 			root = root[0]
 			antecedents = antecedents + get_antecedents(root, ind, s, s1)
 			anaphors = anaphors + get_anaphors(root, ind, s, s1)
