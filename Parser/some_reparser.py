@@ -18,7 +18,6 @@ class Configuration:
 
 
 def parse(text):
-	print(text)
 	__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 	configParser = ConfigParser.ConfigParser()
 	configParser.read(os.path.join(__location__, 'intellection_wrapper.cfg'))
