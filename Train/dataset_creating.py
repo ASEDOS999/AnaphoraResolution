@@ -48,7 +48,7 @@ def contains(words, xml_obj):
 			return ind
 	return None
 
-def get_matching_one(dataset, xml_dataset):
+def get_matching_one(dataset, xml_dataset, key):
 	antecedents, anaphors = dataset
 	res = list()
 	for i in xml_dataset:
@@ -56,7 +56,7 @@ def get_matching_one(dataset, xml_dataset):
 			num_ant = contains(antecedents, i['answer'])
 			num_anaph = contains(anaphors, i['anaphor'])
 			if not (num_ant is None or num_anaph is None):
-				res.append((num_ant, num_anaph))
+				res.append((key, num_ant, num_anaph))
 	return res
 
 def get_matching(our_dataset, xml_dataset):
@@ -64,8 +64,31 @@ def get_matching(our_dataset, xml_dataset):
 	for i in xml_dataset:
 		key = '../LearnSet/AnaphFiles/' + i
 		if key in our_dataset:
-			res += (get_matching_one(our_dataset[key], xml_dataset[i]))
+			res += (get_matching_one(our_dataset[key], xml_dataset[i], key))
 	return res
+
+import pandas as pd
+def get_marking(dataset, matching):
+	positive_samples = []
+	for i in matching:
+		key, num_ant, num_anaph = i
+		ant, anaph = dataset[key]
+		positive_samples.append((ant[num_ant], anaph[num_anaph]))
+	negative_samples = []
+	for key in dataset:
+		ant, anaph = dataset[key]
+		print(len(ant), len(anaph), len(ant)*len(anaph))
+		for num_ant, i in enumerate(ant):
+			for num_anaph, j in enumerate(anaph):
+				if (num_ant, num_anaph) in matching:
+					negative_samples.append((i,j))
+	return positive_samples, negative_samples
+
+
+def train_dataset(dataset, matching):
+	positive_samples, negative_samples = get_marking(dataset, matching)
+	print(positive_samples[:1])
+	return None
 
 if __name__ == '__main__':
 	folder = '../LearnSet/AnaphFiles/'
@@ -86,4 +109,4 @@ if __name__ == '__main__':
 		f.close()
 	match = get_matching(my_dataset, dataset_from_xml)
 	print(len(match))
-
+	train_dataset(my_dataset, match)
