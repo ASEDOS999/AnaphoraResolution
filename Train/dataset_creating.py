@@ -82,8 +82,8 @@ def create_binarizator(dataset):
 		ant += ant1
 		anaph += anaph1
 	feat = get_features(ant), get_features(anaph)
-	f = open(name_f)
-	pickle.dump((feat, '../' + f))
+	f = open('../' + name_f, 'wb')
+	pickle.dump(feat, f)
 	f.close()
 	return feat
 
@@ -154,15 +154,53 @@ def get_marking(dataset, matching):
 		print(len(ant), len(anaph), len(ant)*len(anaph))
 		for num_ant, i in enumerate(ant):
 			for num_anaph, j in enumerate(anaph):
-				if (num_ant, num_anaph) in matching:
+				if not (num_ant, num_anaph) in matching:
 					negative_samples.append((key, i,j))
 	return positive_samples, negative_samples
 
 
 def train_dataset(dataset, matching):
 	positive_samples, negative_samples = get_marking(dataset, matching)
-	print(positive_samples[:1])
+	f = open('pos.pickle', 'wb')
+	pickle.dump(positive_samples, f)
+	f.close()
+	f = open('neg.pickle', 'wb')
+	pickle.dump(negative_samples, f)
+	f.close()
 	return None
+
+def condition_gender(ant, anaph):
+	key = 'TokenMorph:Gender'
+	if key in ant and key in anaph and anaph['TokenMorph:fPOS'] == 'PRON':
+		mark = ant[key] == anaph[key]
+		if anaph[key] in _ and ant[key] in _:
+			mark = True
+		if anaph['TokenLemma'] == 'свой':
+			mark = True
+	else:
+		mark = True
+	return mark
+
+def get_candidates(dataset):
+	for i in dataset:
+		ant, anaph = dataset[i]
+		start = 0
+		cand_list = []
+		for j in anaph:
+			sent_num = j['sent_num']
+			candidates = []
+			while sent_num - ant[start] > 3:
+				start += 1
+			if sent_num-ant[start] < 0:
+				candidates.append(ant[start])
+			ind = start
+			while 0 <= sent_num - ant[ind]['sent_num'] <= 3:
+				ind += 1
+				if condition_gender(ant[ind], j):
+					candidates.append(ant[ind])
+			cand_list.append(candidates)
+		dataset[i] = (cand_list, anaph)
+	return dataset
 
 if __name__ == '__main__':
 	folder = 'LearnSet/AnaphFiles/'
@@ -182,6 +220,4 @@ if __name__ == '__main__':
 		f = open(name_pickle, 'wb')
 		pickle.dump(my_dataset, f)
 		f.close()
-	match = get_matching(my_dataset, dataset_from_xml)
-	print(len(match))
-	train_dataset(my_dataset, match)
+	create_binarizator(my_dataset)
