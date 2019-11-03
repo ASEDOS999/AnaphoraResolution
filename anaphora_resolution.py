@@ -140,7 +140,7 @@ def get_anaphors(root, ind, s, s1, sent):
 		root_subtree, parent = root_subtree
 		cur_res.append({'subtree' : root_subtree,
 			'sent_num' : ind,
-			'noun_index' : s + root_subtree.value.index,
+			'index_text' : s + root_subtree.value.index,
 			'index_sent' : root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
 			'end_symb' : s1 + root_subtree.value.end,
