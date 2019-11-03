@@ -57,7 +57,6 @@ def get_tree(text):
 		vertices_list = []
 		for i in range(len(analysis_res['lemma'][j])):
 			start, end = analysis_res['tokens'][i].begin, analysis_res['tokens'][i].end
-			print(text[start:end])
 			role_vert = []
 			for rel in relations:
 				if rel['child']['start'] == start and rel['child']['end'] == end:
@@ -116,23 +115,25 @@ def separation_to_sentences(text):
 	sentences = [(i, len(i.split())) for i in sentences]
 	return sentences
 
-def get_antecedents(root, ind, s, s1):
+def get_antecedents(root, ind, s, s1, sent):
 	nouns_subtrees = get_subtree(root, postag = 'NOUN')
 	cur_res = []
 	for root_subtree in nouns_subtrees:
 		root_subtree, parent = root_subtree
 		cur_res.append({'subtree' : root_subtree,
 			'sent_num' : ind,
-			'noun_index' : s + root_subtree.value.index,
+			'index_text' : s + root_subtree.value.index,
+			'index_sent' : root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
 			'end_symb' : s1 + root_subtree.value.end,
 			'parent_value' : parent[0],
 			'dependence' : parent[1],
-			'role' : root_subtree.value.role
+			'role' : root_subtree.value.role,
+			'context' : sent,
 			})
 	return cur_res
 
-def get_anaphors(root, ind, s, s1):
+def get_anaphors(root, ind, s, s1, sent):
 	pron_subtrees = get_subtree(root, postag = 'PRON')
 	cur_res = []
 	for root_subtree in pron_subtrees:
@@ -140,11 +141,13 @@ def get_anaphors(root, ind, s, s1):
 		cur_res.append({'subtree' : root_subtree,
 			'sent_num' : ind,
 			'noun_index' : s + root_subtree.value.index,
+			'index_sent' : root_subtree.value.index,
 			'start_symb' : s1 + root_subtree.value.begin,
 			'end_symb' : s1 + root_subtree.value.end,
 			'parent_value' : parent[0],
 			'dependence' : parent[1],
-			'role' : root_subtree.value.role
+			'role' : root_subtree.value.role,
+			'context' : sent
 			})
 	return cur_res
 
@@ -157,8 +160,9 @@ def get_antecedent_anaphor(text):
 		root = get_tree(sentence)
 		if not root is None and len(root) > 0:
 			root = root[0]
-			antecedents = antecedents + get_antecedents(root, ind, s, s1)
-			anaphors = anaphors + get_anaphors(root, ind, s, s1)
+			sent = (root.sentence)
+			antecedents = antecedents + get_antecedents(root, ind, s, s1, sent)
+			anaphors = anaphors + get_anaphors(root, ind, s, s1, sent)
 		s += num_token
 		s1 += len(sentence)
 	return antecedents, anaphors
