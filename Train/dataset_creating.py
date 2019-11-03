@@ -57,6 +57,59 @@ def transform_dataset(dataset):
 		new_dataset[i] = new_ant, new_anaph
 	return new_dataset
 
+def create_binarizator(dataset):
+	def get_features(some_list):
+		features = dict()
+		for i in some_list:
+			for j in i:
+				features[j] = []
+		for i in some_list:
+			for key in features:
+				if key in i:
+					if type(i[key]) == list:
+						features[key] += i[key]
+					elif type(i[key]) == str:
+						features[key].append(i[key])
+		features = {i:list({j:[] for j in features[i]}.keys()) for i in features}
+		for i in
+		return features
+	name_f = 'binarizator.pickle'
+	if name_f in os.listdir('../'):
+		return None
+	ant, anaph = [], []
+	for i in dataset:
+		ant1, anaph1 = dataset[i]
+		ant += ant1
+		anaph += anaph1
+	feat = get_features(ant), get_features(anaph)
+	f = open(name_f)
+	pickle.dump((feat, '../' + f))
+	f.close()
+	return feat
+
+def binarize(dataset):
+	def transform_elem(elem , features):
+		new_elem = dict()
+		for i in features:
+			if len(features[i]) == 0:
+				new_elem[i] = elem[i]
+			else:
+				for j in features[i]:
+					new_elem[i+':'+j] = int(elem[i]==j)
+		return new_elem
+	def transform(some_list, features):
+		return [transform_elem(i, features) for i in some_list]
+	f = open('../binarizator.pickle')
+	feat_ant, feat_anaph = pickle.load(f)
+	f.close()
+	new_dataset = {}
+	for i in dataset:
+		ant, anaph = dataset[i]
+		new_ant = transform(ant, feat_ant)
+		new_feat = transform(anaph, feat_anaph)
+		new_dataset[i] = new_ant, new_anaph
+	return new_dataset
+
 def contains(words, xml_obj):
 	attrib = xml_obj['attr']
 	start, ln = int(attrib['sh']), int(attrib['ln'])
