@@ -182,19 +182,19 @@ def condition_gender(ant, anaph):
 		mark = True
 	return mark
 
-def get_candidates(dataset):
+def get_candidates(dataset, lim = 3):
 	for i in dataset:
 		ant, anaph = dataset[i]
 		start = 0
 		candidates = []
 		for j in anaph:
 			sent_num = j['sent_num']
-			while sent_num - ant[start]['sent_num'] > 3:
+			while sent_num - ant[start]['sent_num'] > lim:
 				start += 1
 			if sent_num-ant[start]['sent_num'] < 0:
 				candidates.append((ant[start],j))
 			ind = start
-			while ind < len(ant) and 0 <= sent_num - ant[ind]['sent_num'] <= 3:
+			while ind < len(ant) and 0 <= sent_num - ant[ind]['sent_num'] <= lim:
 				if condition_gender(ant[ind], j):
 					candidates.append((ant[ind], j))
 				ind += 1
@@ -202,20 +202,23 @@ def get_candidates(dataset):
 	return dataset
 
 def find_in_xml(pair, xml_dataset):
+	mark = -1
 	for j in xml_dataset:
 		if 'answer' in j and 'anaphor' in j:
 			ant, anaph = j['answer']['attr'], j['anaphor']['attr']
 
 			start, ln = int(ant['sh']), int(ant['ln'])
 			start_ant, end_ant = start, start+ln
-			mark = start_ant >= pair[0]['start_symb'] and end_ant <= pair[0]['end_symb']
+			mark_ant = start_ant >= pair[0]['start_symb'] and end_ant <= pair[0]['end_symb']
 
 			start, ln = int(anaph['sh']), int(anaph['ln'])
 			start_anaph, end_anaph = start, start+ln
-			mark = start_anaph >= pair[1]['start_symb'] and end_anaph <= pair[1]['end_symb']
-			if mark:
-				return True
-	return False
+			mark_anaph = start_anaph >= pair[1]['start_symb'] and end_anaph <= pair[1]['end_symb']
+			if mark_anaph and mark_ant:
+				return 1
+			if mark_anaph:
+				mark = 0
+	return mark
 
 def get_matching_for_candidates(dataset, xml_dataset):
 	for i in dataset:
@@ -223,9 +226,7 @@ def get_matching_for_candidates(dataset, xml_dataset):
 		cur, xml_ = dataset[i], xml_dataset[key]
 		new = []
 		for pair in cur:
-			mark = 0
-			if find_in_xml(pair,xml_):
-				mark = 1
+			mark = find_in_xml(pair, xml_)
 			new.append((pair, mark))
 		dataset[i] = new
 	return dataset
@@ -251,3 +252,11 @@ if __name__ == '__main__':
 	create_binarizator(my_dataset)
 	dataset_candidates = get_candidates(my_dataset)
 	marking_dataset = get_matching_for_candidates(dataset_candidates, dataset_from_xml)
+	all, pos = 0, 0
+	for i in marking_dataset:
+		marking_dataset[i] = [j for j in marking_dataset[i] if j[1] >= 0]
+	for i in marking_dataset:
+		cur = marking_dataset[i]
+		all += len([i for i in cur if i[1] > -1])
+		pos += len([i for i in cur if i[1] == 1])
+	print(all, pos, pos/all)
