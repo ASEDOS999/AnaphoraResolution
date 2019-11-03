@@ -25,16 +25,37 @@ def get_dataset(files):
 		dataset[file] = anaphora_resolution.get_antecedent_anaphor(text)
 		f.close()
 	dataset = dict()
-	t = []
 	s = time.time()
 	for file in files:
-		t.append(threading.Thread(target = process_text, args = (file, dataset)))
-	for thread in t:
-		thread.start()
-	for thread in t:
-		thread.join()
-	print(time.time()-s)
+		process_text(file,dataset)
 	return dataset
+
+def transform_dataset(dataset):
+	def transform(elem):
+		new_elem = {}
+		attention = ['subtree', 'parent_value']
+		for i in elem:
+			if not i in attention:
+				new_elem[i] = elem[i]
+		new_elem['TokenLemma'] = elem['subtree'].value.lemma
+		morph = elem['subtree'].value.morph
+		for i in morph:
+			new_elem['TokenMorph:'+i] = morph[i]
+		parent = elem['parent_value']
+		morph = parent.morph
+		for i in morph:
+			new_elem['ParentMorph:'+i] = morph[i]
+		return new_elem
+	new_dataset = dict()
+	for i in dataset:
+		ant, anaph = dataset[i]
+		new_ant, new_anaph = [], []
+		for j in ant:
+			new_ant.append(transform(i))
+		for j in anaph:
+			new_anaph.append(transform(i))
+		new_dataset[i] = new_ant, new_anaph
+	return new_dataset
 
 def contains(words, xml_obj):
 	attrib = xml_obj['attr']
@@ -73,7 +94,7 @@ def get_marking(dataset, matching):
 	for i in matching:
 		key, num_ant, num_anaph = i
 		ant, anaph = dataset[key]
-		positive_samples.append((ant[num_ant], anaph[num_anaph]))
+		positive_samples.append((key, ant[num_ant], anaph[num_anaph]))
 	negative_samples = []
 	for key in dataset:
 		ant, anaph = dataset[key]
@@ -81,7 +102,7 @@ def get_marking(dataset, matching):
 		for num_ant, i in enumerate(ant):
 			for num_anaph, j in enumerate(anaph):
 				if (num_ant, num_anaph) in matching:
-					negative_samples.append((i,j))
+					negative_samples.append((key, i,j))
 	return positive_samples, negative_samples
 
 
