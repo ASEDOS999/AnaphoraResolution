@@ -63,7 +63,8 @@ def create_binarizator(dataset):
 		features = dict()
 		for i in some_list:
 			for j in i:
-				features[j] = []
+				if j != 'context' and not 'Token' in j:
+					features[j] = []
 		for i in some_list:
 			for key in features:
 				if key in i:
@@ -86,29 +87,6 @@ def create_binarizator(dataset):
 	pickle.dump(feat, f)
 	f.close()
 	return feat
-
-def binarize(dataset):
-	def transform_elem(elem , features):
-		new_elem = dict()
-		for i in features:
-			if len(features[i]) == 0:
-				new_elem[i] = elem[i]
-			else:
-				for j in features[i]:
-					new_elem[i+':'+j] = int(elem[i]==j)
-		return new_elem
-	def transform(some_list, features):
-		return [transform_elem(i, features) for i in some_list]
-	f = open('../binarizator.pickle')
-	feat_ant, feat_anaph = pickle.load(f)
-	f.close()
-	new_dataset = {}
-	for i in dataset:
-		ant, anaph = dataset[i]
-		new_ant = transform(ant, feat_ant)
-		new_feat = transform(anaph, feat_anaph)
-		new_dataset[i] = new_ant, new_anaph
-	return new_dataset
 
 def contains(words, xml_obj):
 	attrib = xml_obj['attr']
@@ -231,6 +209,31 @@ def get_matching_for_candidates(dataset, xml_dataset):
 		dataset[i] = new
 	return dataset
 
+def binarize_pair(pair):
+	def transform_elem(elem , features):
+		new_elem = dict()
+		for i in features:
+			if i in elem:
+				if len(features[i]) == 0:
+					new_elem[i] = elem[i]
+				else:
+					for j in features[i]:
+						new_elem[i+':'+j] = int(elem[i]==j)
+			else:
+				if len(features[i]) == 0:
+					new_elem[i] = 0
+				else:
+					for j in features[i]:
+						new_elem[i+':'+j] = 0
+		return new_elem
+	f = open('../binarizator.pickle', 'rb')
+	feat_ant, feat_anaph = pickle.load(f)
+	f.close()
+	ant, anaph = pair
+	new_ant = transform_elem(ant, feat_ant)
+	new_anaph = transform_elem(anaph, feat_anaph)
+	return new_ant, new_anaph
+
 if __name__ == '__main__':
 	folder = 'LearnSet/AnaphFiles/'
 	print('Number Of Files',len(get_all_files(folder)))
@@ -260,3 +263,4 @@ if __name__ == '__main__':
 		all += len([i for i in cur if i[1] > -1])
 		pos += len([i for i in cur if i[1] == 1])
 	print(all, pos, pos/all)
+	binarize_dataset = {j : [(binarize_pair(i[0]),i[1]) for i in marking_dataset[j]] for j in marking_dataset}
