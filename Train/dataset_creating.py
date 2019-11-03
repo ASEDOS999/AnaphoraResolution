@@ -171,6 +171,7 @@ def train_dataset(dataset, matching):
 
 def condition_gender(ant, anaph):
 	key = 'TokenMorph:Gender'
+	_ = ['Mask', 'Neut']
 	if key in ant and key in anaph and anaph['TokenMorph:fPOS'] == 'PRON':
 		mark = ant[key] == anaph[key]
 		if anaph[key] in _ and ant[key] in _:
@@ -185,21 +186,48 @@ def get_candidates(dataset):
 	for i in dataset:
 		ant, anaph = dataset[i]
 		start = 0
-		cand_list = []
+		candidates = []
 		for j in anaph:
 			sent_num = j['sent_num']
-			candidates = []
-			while sent_num - ant[start] > 3:
+			while sent_num - ant[start]['sent_num'] > 3:
 				start += 1
-			if sent_num-ant[start] < 0:
-				candidates.append(ant[start])
+			if sent_num-ant[start]['sent_num'] < 0:
+				candidates.append((ant[start],j))
 			ind = start
-			while 0 <= sent_num - ant[ind]['sent_num'] <= 3:
-				ind += 1
+			while ind < len(ant) and 0 <= sent_num - ant[ind]['sent_num'] <= 3:
 				if condition_gender(ant[ind], j):
-					candidates.append(ant[ind])
-			cand_list.append(candidates)
-		dataset[i] = (cand_list, anaph)
+					candidates.append((ant[ind], j))
+				ind += 1
+		dataset[i] = candidates
+	return dataset
+
+def find_in_xml(pair, xml_dataset):
+	for j in xml_dataset:
+		if 'answer' in j and 'anaphor' in j:
+			ant, anaph = j['answer']['attr'], j['anaphor']['attr']
+
+			start, ln = int(ant['sh']), int(ant['ln'])
+			start_ant, end_ant = start, start+ln
+			mark = start_ant >= pair[0]['start_symb'] and end_ant <= pair[0]['end_symb']
+
+			start, ln = int(anaph['sh']), int(anaph['ln'])
+			start_anaph, end_anaph = start, start+ln
+			mark = start_anaph >= pair[1]['start_symb'] and end_anaph <= pair[1]['end_symb']
+			if mark:
+				return True
+	return False
+
+def get_matching_for_candidates(dataset, xml_dataset):
+	for i in dataset:
+		key = '/'.join(i.split('/')[-2:])
+		cur, xml_ = dataset[i], xml_dataset[key]
+		new = []
+		for pair in cur:
+			mark = 0
+			if find_in_xml(pair,xml_):
+				mark = 1
+			new.append((pair, mark))
+		dataset[i] = new
 	return dataset
 
 if __name__ == '__main__':
@@ -221,3 +249,5 @@ if __name__ == '__main__':
 		pickle.dump(my_dataset, f)
 		f.close()
 	create_binarizator(my_dataset)
+	dataset_candidates = get_candidates(my_dataset)
+	marking_dataset = get_matching_for_candidates(dataset_candidates, dataset_from_xml)
