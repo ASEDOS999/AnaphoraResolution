@@ -234,6 +234,33 @@ def binarize_pair(pair):
 	new_anaph = transform_elem(anaph, feat_anaph)
 	return new_ant, new_anaph
 
+import pandas as pd
+def create_DataFrame(pairs):
+	try:
+		f = open('keys.pickle', 'rb')
+		keys_ant, keys_anaph = pickle.load(f)
+		f.close()
+	except:
+		keys_ant = pairs[0][0]
+		keys_anaph = pairs[0][1]
+		keys_ant = ['Ant:'+i for i in keys_ant]
+		keys_anaph = ['Anaph:'+i for i in keys_anaph]
+		keys_ant.sort()
+		keys_anaph.sort()
+		f = open('keys.pickle', 'wb')
+		pickle.dump((keys_ant, keys_anaph), f)
+		f.close()
+	keys = keys_ant + keys_anaph
+	df = {i:[] for  i in keys}
+	for i in pairs:
+		anaph, ant = i[1], i[0]
+		for key in keys_anaph:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(anaph[key_])
+		for key in keys_ant:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(ant[key_])
+	return pd.DataFrame.from_dict(df)[keys]
 if __name__ == '__main__':
 	folder = 'LearnSet/AnaphFiles/'
 	print('Number Of Files',len(get_all_files(folder)))
@@ -264,3 +291,12 @@ if __name__ == '__main__':
 		pos += len([i for i in cur if i[1] == 1])
 	print(all, pos, pos/all)
 	binarize_dataset = {j : [(binarize_pair(i[0]),i[1]) for i in marking_dataset[j]] for j in marking_dataset}
+	marks, pairs = [], []
+	for i in binarize_dataset:
+		cur = binarize_dataset[i]
+		for j in cur:
+			marks.append(j[1])
+			pairs.append(j[0])
+	df = create_DataFrame(pairs)
+	df.to_csv('data.csv')
+	pd.DataFrame(np.array(marks)).to_csv('marks.csv')
