@@ -42,18 +42,19 @@ def transform_dataset(dataset):
 		for i in morph:
 			new_elem['TokenMorph:'+i] = morph[i]
 		parent = elem['parent_value']
-		morph = parent.morph
-		for i in morph:
-			new_elem['ParentMorph:'+i] = morph[i]
+		if not parent is None:
+			morph = parent.morph
+			for i in morph:
+				new_elem['ParentMorph:'+i] = morph[i]
 		return new_elem
 	new_dataset = dict()
 	for i in dataset:
 		ant, anaph = dataset[i]
 		new_ant, new_anaph = [], []
 		for j in ant:
-			new_ant.append(transform(i))
+			new_ant.append(transform(j))
 		for j in anaph:
-			new_anaph.append(transform(i))
+			new_anaph.append(transform(j))
 		new_dataset[i] = new_ant, new_anaph
 	return new_dataset
 
@@ -71,7 +72,6 @@ def create_binarizator(dataset):
 					elif type(i[key]) == str:
 						features[key].append(i[key])
 		features = {i:list({j:[] for j in features[i]}.keys()) for i in features}
-		for i in
 		return features
 	name_f = 'binarizator.pickle'
 	if name_f in os.listdir('../'):
@@ -165,9 +165,9 @@ def train_dataset(dataset, matching):
 	return None
 
 if __name__ == '__main__':
-	folder = '../LearnSet/AnaphFiles/'
+	folder = 'LearnSet/AnaphFiles/'
 	print('Number Of Files',len(get_all_files(folder)))
-	dataset_from_xml = xml_parsing.extract_dataset('../LearnSet/anaph_new.xml')
+	dataset_from_xml = xml_parsing.extract_dataset('LearnSet/anaph_new.xml')
 	files = dataset_from_xml.keys()
 	files = [folder + i for i in files]
 	print('Number Of Files In xml-file', len(files))
@@ -178,6 +178,7 @@ if __name__ == '__main__':
 		f.close()
 	except:
 		my_dataset = get_dataset(files)
+		my_dataset = transform_dataset(my_dataset)
 		f = open(name_pickle, 'wb')
 		pickle.dump(my_dataset, f)
 		f.close()
