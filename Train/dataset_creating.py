@@ -60,33 +60,36 @@ def transform_dataset(dataset):
 	return new_dataset
 
 def create_binarizator(dataset):
-	def get_features(some_list):
+	def get_features(some_list, token = False):
 		features = dict()
 		for i in some_list:
 			for j in i:
-				if j != 'context' and not 'Token' in j:
+				if j != 'context' and (not 'Token' in j or token):
 					features[j] = []
 		for i in some_list:
 			for key in features:
 				if key in i:
-					if type(i[key]) == list:
-						features[key] += i[key]
-					elif type(i[key]) == str:
-						features[key].append(i[key])
+					if not('TokenLemma' in key and i['TokenMorph:fPOS'] != 'PRON'):
+						if type(i[key]) == list:
+							features[key] += i[key]
+						elif type(i[key]) == str:
+							features[key].append(i[key])
 		features = {i:list({j:[] for j in features[i]}.keys()) for i in features}
 		return features
 	name_f = 'binarizator.pickle'
 	if name_f in os.listdir('../'):
 		return None
+	print('CreateBinarizator')
 	ant, anaph = [], []
 	for i in dataset:
 		ant1, anaph1 = dataset[i]
 		ant += ant1
 		anaph += anaph1
-	feat = get_features(ant), get_features(anaph)
+	feat = get_features(ant), get_features(anaph, True)
 	f = open('../' + name_f, 'wb')
 	pickle.dump(feat, f)
 	f.close()
+	print(len(feat[0]), len(feat[1]))
 	return feat
 
 def contains(words, xml_obj):
@@ -226,7 +229,6 @@ def binarize_pair(pair):
 				else:
 					for j in features[i]:
 						new_elem[i+':'+j] = 0
-		new_elem['TokenLemma'] = elem['TokenLemma']
 		return new_elem
 	f = open('../binarizator.pickle', 'rb')
 	feat_ant, feat_anaph = pickle.load(f)
@@ -252,18 +254,19 @@ def create_DataFrame(pairs):
 		f = open('keys.pickle', 'wb')
 		pickle.dump((keys_ant, keys_anaph), f)
 		f.close()
-	keys = keys_ant + keys_anaph + [i+':Lemma' for i in ['Anaph', 'Ant']]
+	keys = keys_ant + keys_anaph
+	print(keys)
 	df = {i:[] for  i in keys}
 	for i in pairs:
 		anaph, ant = i[1], i[0]
 		for key in keys_anaph:
 			key_ = ':'.join(key.split(':')[1:])
 			df[key].append(anaph[key_])
-		df['Anaph:Lemma'].append(anaph['TokenLemma'])
+		#df['Anaph:Lemma'].append(anaph['TokenLemma'])
 		for key in keys_ant:
 			key_ = ':'.join(key.split(':')[1:])
 			df[key].append(ant[key_])
-		df['Ant:Lemma'].append(ant['TokenLemma'])
+		#df['Ant:Lemma'].append(ant['TokenLemma'])
 	return pd.DataFrame.from_dict(df)[keys]
 if __name__ == '__main__':
 	folder = 'LearnSet/AnaphFiles/'
