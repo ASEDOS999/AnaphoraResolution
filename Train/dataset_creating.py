@@ -5,6 +5,7 @@ import xml_parsing
 import anaphora_resolution
 import pickle
 import threading
+import numpy as np
 
 def get_all_files(folder, files = None):
 	if files is None:
@@ -225,6 +226,7 @@ def binarize_pair(pair):
 				else:
 					for j in features[i]:
 						new_elem[i+':'+j] = 0
+		new_elem['TokenLemma'] = elem['TokenLemma']
 		return new_elem
 	f = open('../binarizator.pickle', 'rb')
 	feat_ant, feat_anaph = pickle.load(f)
@@ -250,16 +252,18 @@ def create_DataFrame(pairs):
 		f = open('keys.pickle', 'wb')
 		pickle.dump((keys_ant, keys_anaph), f)
 		f.close()
-	keys = keys_ant + keys_anaph
+	keys = keys_ant + keys_anaph + [i+':Lemma' for i in ['Anaph', 'Ant']]
 	df = {i:[] for  i in keys}
 	for i in pairs:
 		anaph, ant = i[1], i[0]
 		for key in keys_anaph:
 			key_ = ':'.join(key.split(':')[1:])
 			df[key].append(anaph[key_])
+		df['Anaph:Lemma'].append(anaph['TokenLemma'])
 		for key in keys_ant:
 			key_ = ':'.join(key.split(':')[1:])
 			df[key].append(ant[key_])
+		df['Ant:Lemma'].append(ant['TokenLemma'])
 	return pd.DataFrame.from_dict(df)[keys]
 if __name__ == '__main__':
 	folder = 'LearnSet/AnaphFiles/'
@@ -279,6 +283,7 @@ if __name__ == '__main__':
 		f = open(name_pickle, 'wb')
 		pickle.dump(my_dataset, f)
 		f.close()
+	#print(my_dataset['../LearnSet/AnaphFiles/OFC/2.txt'][1][1].keys())
 	create_binarizator(my_dataset)
 	dataset_candidates = get_candidates(my_dataset)
 	marking_dataset = get_matching_for_candidates(dataset_candidates, dataset_from_xml)
@@ -298,5 +303,5 @@ if __name__ == '__main__':
 			marks.append(j[1])
 			pairs.append(j[0])
 	df = create_DataFrame(pairs)
-	df.to_csv('data.csv')
-	pd.DataFrame(np.array(marks)).to_csv('marks.csv')
+	df.to_csv('data.csv', index = False)
+	pd.DataFrame(np.array(marks)).to_csv('marks.csv', index = False)
