@@ -84,15 +84,14 @@ def get_tree(text):
 def get_subtree(root, postag = 'NOUN', res = None, parent = (None, None)):
 	if res is None:
 		res = list()
-	if postag == 'PRON' and root.value.postag == 'NOUN':
-		mark = False
-		for i in root.kids:
-			if i[0].value.lemma in ['этот', 'тот', 'такой']:
-				mark = True
-		if mark:
-			res.append((root, parent))
-	elif root.value.postag == postag:
-		res.append((root, parent))
+	lemma_list = ['он', 'она', 'они', 'оно']
+	lemma_list += ['этот', 'тот', 'такой']
+	if root.value.postag == postag:
+		if postag == 'PRON':
+			if root.value.lemma in lemma_list:
+				res.append((root, parent))
+		else:
+			res.append((root, append))
 	for i in root.kids:
 		res = get_subtree(i[0], postag, res, (root.value, i[1]))
 	return res
