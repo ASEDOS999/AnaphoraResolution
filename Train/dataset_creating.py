@@ -28,6 +28,7 @@ def get_dataset(files):
 	dataset = dict()
 	s = time.time()
 	for file in files:
+		print(file)
 		process_text(file,dataset)
 	return dataset
 

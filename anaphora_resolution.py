@@ -91,7 +91,7 @@ def get_subtree(root, postag = 'NOUN', res = None, parent = (None, None)):
 			if root.value.lemma in lemma_list:
 				res.append((root, parent))
 		else:
-			res.append((root, append))
+			res.append((root, parent))
 	for i in root.kids:
 		res = get_subtree(i[0], postag, res, (root.value, i[1]))
 	return res
