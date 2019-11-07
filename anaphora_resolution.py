@@ -1,6 +1,9 @@
 from isanlp import PipelineCommon
 from isanlp.processor_remote import ProcessorRemote
 from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
+import numpy as np
+import pandas as pd
+import time
 
 class tree:
 	def __init__(self, value, sentence = None):
@@ -20,7 +23,8 @@ class word:
 		self.begin = begin
 		self.end = end
 		self.role = role
-
+		self.anaphor_resolution = None
+		
 def get_tree(text):
 	from isanlp import PipelineCommon
 	from isanlp.processor_remote import ProcessorRemote
@@ -296,34 +300,39 @@ def binarize_pair(pair):
 	new_anaph = transform_elem(anaph, feat_anaph)
 	return new_ant, new_anaph
 
-import pandas as pd
 def create_DataFrame(pairs):
-	try:
-		f = open('keys.pickle', 'rb')
-		keys_ant, keys_anaph = pickle.load(f)
-		f.close()
-	except:
-		keys_ant = pairs[0][0]
-		keys_anaph = pairs[0][1]
-		keys_ant = ['Ant:'+i for i in keys_ant]
-		keys_anaph = ['Anaph:'+i for i in keys_anaph]
-		keys_ant.sort()
-		keys_anaph.sort()
-		f = open('keys.pickle', 'wb')
-		pickle.dump((keys_ant, keys_anaph), f)
-		f.close()
-	keys = keys_ant + keys_anaph
-	print(keys)
-	df = {i:[] for  i in keys}
-	for i in pairs:
-		anaph, ant = i[1], i[0]
-		for key in keys_anaph:
-			key_ = ':'.join(key.split(':')[1:])
-			df[key].append(anaph[key_])
-		#df['Anaph:Lemma'].append(anaph['TokenLemma'])
-		for key in keys_ant:
-			key_ = ':'.join(key.split(':')[1:])
-			df[key].append(ant[key_])
-		#df['Ant:Lemma'].append(ant['TokenLemma'])
-	return pd.DataFrame.from_dict(df)[keys]
+	def process_one_file(pairs):
+		try:
+			f = open('keys.pickle', 'rb')
+			keys_ant, keys_anaph = pickle.load(f)
+			f.close()
+		except:
+			keys_ant = pairs[0][0]
+			keys_anaph = pairs[0][1]
+			keys_ant = ['Ant:'+i for i in keys_ant]
+			keys_anaph = ['Anaph:'+i for i in keys_anaph]
+			keys_ant.sort()
+			keys_anaph.sort()
+			f = open('keys.pickle', 'wb')
+			pickle.dump((keys_ant, keys_anaph), f)
+			f.close()
+		keys = keys_ant + keys_anaph
+		df = {i:[] for  i in keys}
+		for i in pairs:
+			anaph, ant = i[1], i[0]
+			for key in keys_anaph:
+				key_ = ':'.join(key.split(':')[1:])
+				df[key].append(anaph[key_])
+			for key in keys_ant:
+				key_ = ':'.join(key.split(':')[1:])
+				df[key].append(ant[key_])
+		return pd.DataFrame.from_dict(df)[keys]
+	my_dataset = get_dataset(files)
+	create_binarizator(my_dataset)
+	dataset_candidates = get_candidates(my_dataset)
+	binarize_dataset = {j : [binarize_pair(i[0]) for i in marking_dataset[j]] for j in marking_dataset}
+	dataset = {i:process_one_file(binarize_dataset[i]) for i in binarize_dataset}
+	return dataset
 
+def anaphora_resolve(pairs, model):
+	return np.argmax(model.predict_proba(pairs))
