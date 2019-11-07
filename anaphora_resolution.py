@@ -165,3 +165,165 @@ def get_antecedent_anaphor(text):
 		s += num_token
 		s1 += len(sentence)
 	return antecedents, anaphors
+
+def get_dataset(files):
+	def transform_dataset(dataset):
+		def transform(elem):
+			new_elem = {}
+			attention = ['subtree', 'parent_value']
+			for i in elem:
+				if not i in attention:
+					new_elem[i] = elem[i]
+			new_elem['TokenLemma'] = elem['subtree'].value.lemma
+			morph = elem['subtree'].value.morph
+			for i in morph:
+				new_elem['TokenMorph:'+i] = morph[i]
+			parent = elem['parent_value']
+			if not parent is None:
+				morph = parent.morph
+				for i in morph:
+					new_elem['ParentMorph:'+i] = morph[i]
+			return new_elem
+		new_dataset = dict()
+		for i in dataset:
+			ant, anaph = dataset[i]
+			new_ant, new_anaph = [], []
+			for j in ant:
+				new_ant.append(transform(j))
+			for j in anaph:
+				new_anaph.append(transform(j))
+			new_dataset[i] = new_ant, new_anaph
+		return new_dataset
+	def process_text(file, dataset):
+		f = open(file, 'r')
+		text  = f.read()
+		dataset[file] = get_antecedent_anaphor(text)
+		f.close()
+	dataset = dict()
+	s = time.time()
+	for file in files:
+		print(file)
+		process_text(file,dataset)
+	return transform_dataset(dataset)
+	
+def create_binarizator(dataset):
+	def get_features(some_list, token = False):
+		features = dict()
+		for i in some_list:
+			for j in i:
+				if j != 'context' and (not 'Token' in j or token):
+					features[j] = []
+		for i in some_list:
+			for key in features:
+				if key in i:
+					if not('TokenLemma' in key and i['TokenMorph:fPOS'] != 'PRON'):
+						if type(i[key]) == list:
+							features[key] += i[key]
+						elif type(i[key]) == str:
+							features[key].append(i[key])
+		features = {i:list({j:[] for j in features[i]}.keys()) for i in features}
+		return features
+	name_f = 'binarizator.pickle'
+	if name_f in os.listdir('../'):
+		return None
+	print('CreateBinarizator')
+	ant, anaph = [], []
+	for i in dataset:
+		ant1, anaph1 = dataset[i]
+		ant += ant1
+		anaph += anaph1
+	feat = get_features(ant), get_features(anaph, True)
+	f = open('../' + name_f, 'wb')
+	pickle.dump(feat, f)
+	f.close()
+	print(len(feat[0]), len(feat[1]))
+	return feat
+	
+def condition_gender(ant, anaph):
+	key = 'TokenMorph:Gender'
+	_ = ['Mask', 'Neut']
+	if key in ant and key in anaph and anaph['TokenMorph:fPOS'] == 'PRON':
+		mark = ant[key] == anaph[key]
+		if anaph[key] in _ and ant[key] in _:
+			mark = True
+		if anaph['TokenLemma'] == 'свой':
+			mark = True
+	else:
+		mark = True
+	return mark
+
+def get_candidates(dataset, lim = 3):
+	for i in dataset:
+		ant, anaph = dataset[i]
+		start = 0
+		candidates = []
+		for j in anaph:
+			sent_num = j['sent_num']
+			while sent_num - ant[start]['sent_num'] > lim:
+				start += 1
+			if sent_num-ant[start]['sent_num'] < 0:
+				candidates.append((ant[start],j))
+			ind = start
+			while ind < len(ant) and 0 <= sent_num - ant[ind]['sent_num'] <= lim:
+				if condition_gender(ant[ind], j):
+					candidates.append((ant[ind], j))
+				ind += 1
+		dataset[i] = candidates
+	return dataset
+	
+def binarize_pair(pair):
+	def transform_elem(elem , features):
+		new_elem = dict()
+		for i in features:
+			if i in elem:
+				if len(features[i]) == 0:
+					new_elem[i] = elem[i]
+				else:
+					for j in features[i]:
+						new_elem[i+':'+j] = int(elem[i]==j)
+			else:
+				if len(features[i]) == 0:
+					new_elem[i] = 0
+				else:
+					for j in features[i]:
+						new_elem[i+':'+j] = 0
+		return new_elem
+	f = open('../binarizator.pickle', 'rb')
+	feat_ant, feat_anaph = pickle.load(f)
+	f.close()
+	ant, anaph = pair
+	new_ant = transform_elem(ant, feat_ant)
+	new_anaph = transform_elem(anaph, feat_anaph)
+	return new_ant, new_anaph
+
+import pandas as pd
+def create_DataFrame(pairs):
+	try:
+		f = open('keys.pickle', 'rb')
+		keys_ant, keys_anaph = pickle.load(f)
+		f.close()
+	except:
+		keys_ant = pairs[0][0]
+		keys_anaph = pairs[0][1]
+		keys_ant = ['Ant:'+i for i in keys_ant]
+		keys_anaph = ['Anaph:'+i for i in keys_anaph]
+		keys_ant.sort()
+		keys_anaph.sort()
+		f = open('keys.pickle', 'wb')
+		pickle.dump((keys_ant, keys_anaph), f)
+		f.close()
+	keys = keys_ant + keys_anaph
+	print(keys)
+	df = {i:[] for  i in keys}
+	for i in pairs:
+		anaph, ant = i[1], i[0]
+		for key in keys_anaph:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(anaph[key_])
+		#df['Anaph:Lemma'].append(anaph['TokenLemma'])
+		for key in keys_ant:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(ant[key_])
+		#df['Ant:Lemma'].append(ant['TokenLemma'])
+	return pd.DataFrame.from_dict(df)[keys]
+
