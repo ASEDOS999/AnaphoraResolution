@@ -90,7 +90,7 @@ def get_subtree(root, postag = 'NOUN', res = None, parent = (None, None)):
 	if res is None:
 		res = list()
 	lemma_list = ['он', 'она', 'они', 'оно']
-	lemma_list += ['этот', 'тот', 'такой']
+	#lemma_list += ['этот', 'тот', 'такой']
 	if root.value.postag == postag:
 		if postag == 'PRON':
 			if root.value.lemma in lemma_list:
@@ -212,7 +212,7 @@ def anaphora_resolution(text):
 				try:
 					res = anaphora_resolve(df, model)
 					ant = cand[res][0]
-					anaphor_root.anaphor_resolution = ant['TokenLemma']
+					anaphor_root.anaphor_resolution = ant.copy()
 				except:
 					print('Bad anaphor', anaphor)
 		s += sentences[ind][1]
