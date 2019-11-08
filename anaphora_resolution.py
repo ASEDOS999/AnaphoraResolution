@@ -170,79 +170,64 @@ def get_antecedent_anaphor(text):
 		s1 += len(sentence)
 	return antecedents, anaphors
 
-def get_dataset(files):
-	def transform_dataset(dataset):
-		def transform(elem):
-			new_elem = {}
-			attention = ['subtree', 'parent_value']
-			for i in elem:
-				if not i in attention:
-					new_elem[i] = elem[i]
-			new_elem['TokenLemma'] = elem['subtree'].value.lemma
-			morph = elem['subtree'].value.morph
-			for i in morph:
-				new_elem['TokenMorph:'+i] = morph[i]
-			parent = elem['parent_value']
-			if not parent is None:
-				morph = parent.morph
-				for i in morph:
-					new_elem['ParentMorph:'+i] = morph[i]
-			return new_elem
-		new_dataset = dict()
-		for i in dataset:
-			ant, anaph = dataset[i]
-			new_ant, new_anaph = [], []
-			for j in ant:
-				new_ant.append(transform(j))
-			for j in anaph:
-				new_anaph.append(transform(j))
-			new_dataset[i] = new_ant, new_anaph
-		return new_dataset
-	def process_text(file, dataset):
-		f = open(file, 'r')
-		text  = f.read()
-		dataset[file] = get_antecedent_anaphor(text)
-		f.close()
-	dataset = dict()
-	s = time.time()
-	for file in files:
-		print(file)
-		process_text(file,dataset)
-	return transform_dataset(dataset)
+def get_antecedents(text, with_tree = False):
+	sentences = separation_to_sentences(text)
+	antecedents = []
+	s, s1 = 0, 0
+	roots = []
+	for ind, item in enumerate(sentences):
+		sentence, num_token = item
+		root = get_tree(sentence)
+		if not root is None and len(root) > 0:
+			root = root[0]
+			sent = (root.sentence)
+			roots.append(root)
+			antecedents = antecedents + get_antecedents(root, ind, s, s1, sent)
+		s += num_token
+		s1 += len(sentence)
+	return antecedents, roots, sentences
 	
-def create_binarizator(dataset):
-	def get_features(some_list, token = False):
-		features = dict()
-		for i in some_list:
-			for j in i:
-				if j != 'context' and (not 'Token' in j or token):
-					features[j] = []
-		for i in some_list:
-			for key in features:
-				if key in i:
-					if not('TokenLemma' in key and i['TokenMorph:fPOS'] != 'PRON'):
-						if type(i[key]) == list:
-							features[key] += i[key]
-						elif type(i[key]) == str:
-							features[key].append(i[key])
-		features = {i:list({j:[] for j in features[i]}.keys()) for i in features}
-		return features
-	name_f = 'binarizator.pickle'
-	if name_f in os.listdir('../'):
-		return None
-	print('CreateBinarizator')
-	ant, anaph = [], []
-	for i in dataset:
-		ant1, anaph1 = dataset[i]
-		ant += ant1
-		anaph += anaph1
-	feat = get_features(ant), get_features(anaph, True)
-	f = open('../' + name_f, 'wb')
-	pickle.dump(feat, f)
+def anaphora_resolution(text)
+	antecedents, roots, sentences = get_antecedents(text)
+	antecedents = [transform_elem(i) for i in antecedents]
+	s, s1 = 0, 0
+	f = open('model.pickle', 'rb')
+	model = pickle.load(f)
 	f.close()
-	print(len(feat[0]), len(feat[1]))
-	return feat
-	
+	for ind, root in enumerate(roots):
+		sent = root.sentence
+		anaphors = get_anaphors(root, ind, s, s1, sent)
+		for anaphor in anaphors:
+			anaphor_root = anaphor['subtree'].value
+			anaphor_transformed = transform_elem(anaphor)
+			cand = get_candidates_for_anaphor(anaphor_transformed, antecedents)
+			pairs = [(i, anaphor_transformed) for i in cand]
+			pairs = [binarize_pair(pair) for pair in pairs]
+			df = process_pairs(pairs)
+			res = anaphora_resolve(df, model)
+			ant = cand[res]
+			anaphor_root.anaphor_resolution = ant['TokenLemma']
+		s += sentences[ind][1]
+		s1 += len(sentences[ind][0])
+	return roots
+
+def transform_elem(elem):
+	new_elem = {}
+	attention = ['subtree', 'parent_value']
+	for i in elem:
+		if not i in attention:
+			new_elem[i] = elem[i]
+	new_elem['TokenLemma'] = elem['subtree'].value.lemma
+	morph = elem['subtree'].value.morph
+	for i in morph:
+		new_elem['TokenMorph:'+i] = morph[i]
+	parent = elem['parent_value']
+	if not parent is None:
+		morph = parent.morph
+		for i in morph:
+			new_elem['ParentMorph:'+i] = morph[i]
+	return new_elem
+			
 def condition_gender(ant, anaph):
 	key = 'TokenMorph:Gender'
 	_ = ['Mask', 'Neut']
@@ -256,24 +241,21 @@ def condition_gender(ant, anaph):
 		mark = True
 	return mark
 
-def get_candidates(dataset, lim = 3):
-	for i in dataset:
-		ant, anaph = dataset[i]
-		start = 0
-		candidates = []
-		for j in anaph:
-			sent_num = j['sent_num']
-			while sent_num - ant[start]['sent_num'] > lim:
-				start += 1
-			if sent_num-ant[start]['sent_num'] < 0:
-				candidates.append((ant[start],j))
-			ind = start
-			while ind < len(ant) and 0 <= sent_num - ant[ind]['sent_num'] <= lim:
-				if condition_gender(ant[ind], j):
-					candidates.append((ant[ind], j))
-				ind += 1
-		dataset[i] = candidates
-	return dataset
+def get_candidates_for_anaphor(anaphor, antecedents):
+	ant, anaph = dataset[i]
+	start = 0
+	candidates = []
+	sent_num = anaphor['sent_num']
+	while sent_num - antecedents[start]['sent_num'] > lim:
+		start += 1
+	if sent_num-antecedents[start]['sent_num'] < 0:
+		candidates.append((antecedents[start], anaphor))
+	ind = start
+	while ind < len(ant) and 0 <= sent_num - antecedents[ind]['sent_num'] <= lim:
+		if condition_gender(antecedents[ind], anaphor):
+			candidates.append((antecedents[ind], anaphor))
+		ind += 1
+	return candidates
 	
 def binarize_pair(pair):
 	def transform_elem(elem , features):
@@ -292,7 +274,7 @@ def binarize_pair(pair):
 					for j in features[i]:
 						new_elem[i+':'+j] = 0
 		return new_elem
-	f = open('../binarizator.pickle', 'rb')
+	f = open('binarizator.pickle', 'rb')
 	feat_ant, feat_anaph = pickle.load(f)
 	f.close()
 	ant, anaph = pair
@@ -300,39 +282,61 @@ def binarize_pair(pair):
 	new_anaph = transform_elem(anaph, feat_anaph)
 	return new_ant, new_anaph
 
-def create_DataFrame(pairs):
-	def process_one_file(pairs):
-		try:
-			f = open('keys.pickle', 'rb')
-			keys_ant, keys_anaph = pickle.load(f)
-			f.close()
-		except:
-			keys_ant = pairs[0][0]
-			keys_anaph = pairs[0][1]
-			keys_ant = ['Ant:'+i for i in keys_ant]
-			keys_anaph = ['Anaph:'+i for i in keys_anaph]
-			keys_ant.sort()
-			keys_anaph.sort()
-			f = open('keys.pickle', 'wb')
-			pickle.dump((keys_ant, keys_anaph), f)
-			f.close()
-		keys = keys_ant + keys_anaph
-		df = {i:[] for  i in keys}
-		for i in pairs:
-			anaph, ant = i[1], i[0]
-			for key in keys_anaph:
-				key_ = ':'.join(key.split(':')[1:])
-				df[key].append(anaph[key_])
-			for key in keys_ant:
-				key_ = ':'.join(key.split(':')[1:])
-				df[key].append(ant[key_])
-		return pd.DataFrame.from_dict(df)[keys]
-	my_dataset = get_dataset(files)
-	create_binarizator(my_dataset)
-	dataset_candidates = get_candidates(my_dataset)
-	binarize_dataset = {j : [binarize_pair(i[0]) for i in marking_dataset[j]] for j in marking_dataset}
-	dataset = {i:process_one_file(binarize_dataset[i]) for i in binarize_dataset}
-	return dataset
+def process_pairs(pairs):
+	try:
+		f = open('keys.pickle', 'rb')
+		keys_ant, keys_anaph = pickle.load(f)
+		f.close()
+	except:
+		keys_ant = pairs[0][0]
+		keys_anaph = pairs[0][1]
+		keys_ant = ['Ant:'+i for i in keys_ant]
+		keys_anaph = ['Anaph:'+i for i in keys_anaph]
+		keys_ant.sort()
+		keys_anaph.sort()
+		f = open('keys.pickle', 'wb')
+		pickle.dump((keys_ant, keys_anaph), f)
+		f.close()
+	keys = keys_ant + keys_anaph
+	df = {i:[] for  i in keys}
+	for i in pairs:
+		anaph, ant = i[1], i[0]
+		for key in keys_anaph:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(anaph[key_])
+		for key in keys_ant:
+			key_ = ':'.join(key.split(':')[1:])
+			df[key].append(ant[key_])
+	return pd.DataFrame.from_dict(df)[keys]
+	
+def anaphora_resolve(df, model):
+	X = prerpocess(model)
+	return np.argmax(model.predict_proba(X))
 
-def anaphora_resolve(pairs, model):
-	return np.argmax(model.predict_proba(pairs))
+def preprocess(df):
+	X = df
+	keys = ['sent_num', 'index_text', 'index_sent', 'start_symb', 'end_symb']
+	for key in keys:
+		X['diff_'+key] = X['Anaph:'+key]-X['Ant:'+key]
+	X['index'] = X['Anaph:index_text']
+	for key in keys:
+		del X['Anaph:' + key], X['Ant:'+key]
+	index, dist = X['index'].values, X['diff_' + 'index_sent'].values
+	res = {i:[] for i in index}
+	for ind, i in enumerate(index):
+		res[i].append((dist[ind],ind))
+	def transform(res):
+		list_ = []
+		u = []
+		for i in res:
+			cur = res[i]
+			cur.sort(key = lambda x: x[0])
+			u.append(len(cur))
+			list_ += [(ind, i[1]) for ind,i in enumerate(cur)]
+		res = list_.copy()
+		for i in list_:
+			res[i[1]] = i[0]
+		return res
+	X['Distance'] = transform(res)
+	del X['index']
+	return X.values
