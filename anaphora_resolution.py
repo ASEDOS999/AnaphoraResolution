@@ -96,7 +96,8 @@ def get_subtree(root, postag = 'NOUN', res = None, parent = (None, None)):
 			if root.value.lemma in lemma_list:
 				res.append((root, parent))
 		else:
-			res.append((root, parent))
+			if len(root.value.lemma) > 1:
+				res.append((root, parent))
 	for i in root.kids:
 		res = get_subtree(i[0], postag, res, (root.value, i[1]))
 	return res
@@ -184,10 +185,12 @@ def get_antecedents_(text, with_tree = False):
 			sent = (root.sentence)
 			roots.append(root)
 			antecedents = antecedents + get_antecedents(root, ind, s, s1, sent)
+		else:
+			roots.append(None)
 		s += num_token
 		s1 += len(sentence)
 	return antecedents, roots, sentences
-	
+import time
 def anaphora_resolution(text):
 	antecedents, roots, sentences = get_antecedents_(text)
 	antecedents = [transform_elem(i) for i in antecedents]
@@ -196,22 +199,22 @@ def anaphora_resolution(text):
 	model = pickle.load(f)
 	f.close()
 	for ind, root in enumerate(roots):
-		sent = root.sentence
-		anaphors = get_anaphors(root, ind, s, s1, sent)
-		for anaphor in anaphors:
-			anaphor_root = anaphor['subtree'].value
-			anaphor_transformed = transform_elem(anaphor)
-			cand = get_candidates_for_anaphor(anaphor_transformed, antecedents)
-			#pairs = [(i, anaphor_transformed) for i in cand]
-			pairs = cand
-			pairs = [binarize_pair(pair) for pair in pairs]
-			df = process_pairs(pairs)
-			try:
-				res = anaphora_resolve(df, model)
-				ant = cand[res][0]
-				anaphor_root.anaphor_resolution = ant['TokenLemma']
-			except:
-				print('Bad anaphor', anaphor)
+		if not root is None:
+			sent = root.sentence
+			anaphors = get_anaphors(root, ind, s, s1, sent)
+			for anaphor in anaphors:
+				anaphor_root = anaphor['subtree'].value
+				anaphor_transformed = transform_elem(anaphor)
+				cand = get_candidates_for_anaphor(anaphor_transformed, antecedents)
+				pairs = cand
+				pairs = [binarize_pair(pair) for pair in pairs]
+				df = process_pairs(pairs)
+				try:
+					res = anaphora_resolve(df, model)
+					ant = cand[res][0]
+					anaphor_root.anaphor_resolution = ant['TokenLemma']
+				except:
+					print('Bad anaphor', anaphor)
 		s += sentences[ind][1]
 		s1 += len(sentences[ind][0])
 	return roots
@@ -232,7 +235,7 @@ def transform_elem(elem):
 		for i in morph:
 			new_elem['ParentMorph:'+i] = morph[i]
 	return new_elem
-			
+
 def condition_gender(ant, anaph):
 	key = 'TokenMorph:Gender'
 	_ = ['Mask', 'Neut']
@@ -260,14 +263,15 @@ def get_candidates_for_anaphor(anaphor, antecedents, lim = 3):
 	while sent_num - antecedents[start]['sent_num'] > lim:
 		start += 1
 	if sent_num-antecedents[start]['sent_num'] < 0:
-		candidates.append((antecedents[start], anaphor))
+		if condition_match(antecedents[ind], anaphor):
+			candidates.append((antecedents[start], anaphor))
 	ind = start
 	while ind < len(antecedents) and 0 <= sent_num - antecedents[ind]['sent_num'] <= lim:
 		if condition_match(antecedents[ind], anaphor):
 			candidates.append((antecedents[ind], anaphor))
 		ind += 1
 	return candidates
-	
+
 def binarize_pair(pair):
 	def transform_elem(elem , features):
 		new_elem = dict()
