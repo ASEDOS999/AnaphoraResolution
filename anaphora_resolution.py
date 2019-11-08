@@ -4,6 +4,7 @@ from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
 import numpy as np
 import pandas as pd
 import time
+import pickle
 
 class tree:
 	def __init__(self, value, sentence = None):
@@ -170,7 +171,7 @@ def get_antecedent_anaphor(text):
 		s1 += len(sentence)
 	return antecedents, anaphors
 
-def get_antecedents(text, with_tree = False):
+def get_antecedents_(text, with_tree = False):
 	sentences = separation_to_sentences(text)
 	antecedents = []
 	s, s1 = 0, 0
@@ -187,8 +188,8 @@ def get_antecedents(text, with_tree = False):
 		s1 += len(sentence)
 	return antecedents, roots, sentences
 	
-def anaphora_resolution(text)
-	antecedents, roots, sentences = get_antecedents(text)
+def anaphora_resolution(text):
+	antecedents, roots, sentences = get_antecedents_(text)
 	antecedents = [transform_elem(i) for i in antecedents]
 	s, s1 = 0, 0
 	f = open('model.pickle', 'rb')
@@ -201,12 +202,16 @@ def anaphora_resolution(text)
 			anaphor_root = anaphor['subtree'].value
 			anaphor_transformed = transform_elem(anaphor)
 			cand = get_candidates_for_anaphor(anaphor_transformed, antecedents)
-			pairs = [(i, anaphor_transformed) for i in cand]
+			#pairs = [(i, anaphor_transformed) for i in cand]
+			pairs = cand
 			pairs = [binarize_pair(pair) for pair in pairs]
 			df = process_pairs(pairs)
-			res = anaphora_resolve(df, model)
-			ant = cand[res]
-			anaphor_root.anaphor_resolution = ant['TokenLemma']
+			try:
+				res = anaphora_resolve(df, model)
+				ant = cand[res][0]
+				anaphor_root.anaphor_resolution = ant['TokenLemma']
+			except:
+				print('Bad anaphor', anaphor)
 		s += sentences[ind][1]
 		s1 += len(sentences[ind][0])
 	return roots
@@ -241,8 +246,14 @@ def condition_gender(ant, anaph):
 		mark = True
 	return mark
 
-def get_candidates_for_anaphor(anaphor, antecedents):
-	ant, anaph = dataset[i]
+def condition_number(ant, anaph):
+	key = 'TokenMorph:Number'
+	return ant[key]==anaph[key]
+
+def condition_match(ant,anaph):
+	return condition_number(ant,anaph) and condition_gender(ant, anaph)
+
+def get_candidates_for_anaphor(anaphor, antecedents, lim = 3):
 	start = 0
 	candidates = []
 	sent_num = anaphor['sent_num']
@@ -251,8 +262,8 @@ def get_candidates_for_anaphor(anaphor, antecedents):
 	if sent_num-antecedents[start]['sent_num'] < 0:
 		candidates.append((antecedents[start], anaphor))
 	ind = start
-	while ind < len(ant) and 0 <= sent_num - antecedents[ind]['sent_num'] <= lim:
-		if condition_gender(antecedents[ind], anaphor):
+	while ind < len(antecedents) and 0 <= sent_num - antecedents[ind]['sent_num'] <= lim:
+		if condition_match(antecedents[ind], anaphor):
 			candidates.append((antecedents[ind], anaphor))
 		ind += 1
 	return candidates
@@ -310,8 +321,8 @@ def process_pairs(pairs):
 	return pd.DataFrame.from_dict(df)[keys]
 	
 def anaphora_resolve(df, model):
-	X = prerpocess(model)
-	return np.argmax(model.predict_proba(X))
+	X = preprocess(df)
+	return np.argmax(model.predict_proba(X)[:,1])
 
 def preprocess(df):
 	X = df
