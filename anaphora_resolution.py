@@ -217,7 +217,7 @@ def anaphora_resolution(text):
 					print('Bad anaphor', anaphor)
 		s += sentences[ind][1]
 		s1 += len(sentences[ind][0])
-	return roots
+	return roots, sentences
 
 def transform_elem(elem):
 	new_elem = {}
