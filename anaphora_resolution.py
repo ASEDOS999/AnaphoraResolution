@@ -200,7 +200,7 @@ def anaphora_resolution(text):
 	antecedents = [transform_elem(i) for i in antecedents]
 	s, s1 = 0, 0
 	global __location__
-	path = os.path.join(__location__, 'model.pickle')
+	path = os.path.join(__location__, 'Model/model.pickle')
 	f = open(path, 'rb')
 	model = pickle.load(f)
 	f.close()
@@ -296,7 +296,7 @@ def binarize_pair(pair):
 						new_elem[i+':'+j] = 0
 		return new_elem
 	global __location__
-	path = os.path.join(__location__, 'binarizator.pickle')
+	path = os.path.join(__location__, 'Model/binarizator.pickle')
 	f = open(path, 'rb')
 	feat_ant, feat_anaph = pickle.load(f)
 	f.close()
@@ -307,7 +307,7 @@ def binarize_pair(pair):
 
 def process_pairs(pairs):
 	global __location__
-	path = os.path.join(__location__, 'keys.pickle')
+	path = os.path.join(__location__, 'Model/keys.pickle')
 	try:
 		f = open(path, 'rb')
 		keys_ant, keys_anaph = pickle.load(f)
