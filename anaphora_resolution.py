@@ -1,10 +1,14 @@
 from isanlp import PipelineCommon
 from isanlp.processor_remote import ProcessorRemote
 from isanlp.ru.converter_mystem_to_ud import ConverterMystemToUd
+import os
 import numpy as np
 import pandas as pd
 import time
 import pickle
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 
 class tree:
 	def __init__(self, value, sentence = None):
@@ -195,7 +199,9 @@ def anaphora_resolution(text):
 	antecedents, roots, sentences = get_antecedents_(text)
 	antecedents = [transform_elem(i) for i in antecedents]
 	s, s1 = 0, 0
-	f = open('model.pickle', 'rb')
+	global __location__
+	path = os.path.join(__location__, 'model.pickle')
+	f = open(path, 'rb')
 	model = pickle.load(f)
 	f.close()
 	for ind, root in enumerate(roots):
@@ -289,7 +295,9 @@ def binarize_pair(pair):
 					for j in features[i]:
 						new_elem[i+':'+j] = 0
 		return new_elem
-	f = open('binarizator.pickle', 'rb')
+	global __location__
+	path = os.path.join(__location__, 'binarizator.pickle')
+	f = open(path, 'rb')
 	feat_ant, feat_anaph = pickle.load(f)
 	f.close()
 	ant, anaph = pair
@@ -298,8 +306,10 @@ def binarize_pair(pair):
 	return new_ant, new_anaph
 
 def process_pairs(pairs):
+	global __location__
+	path = os.path.join(__location__, 'keys.pickle')
 	try:
-		f = open('keys.pickle', 'rb')
+		f = open(path, 'rb')
 		keys_ant, keys_anaph = pickle.load(f)
 		f.close()
 	except:
@@ -309,7 +319,7 @@ def process_pairs(pairs):
 		keys_anaph = ['Anaph:'+i for i in keys_anaph]
 		keys_ant.sort()
 		keys_anaph.sort()
-		f = open('keys.pickle', 'wb')
+		f = open(path, 'wb')
 		pickle.dump((keys_ant, keys_anaph), f)
 		f.close()
 	keys = keys_ant + keys_anaph
